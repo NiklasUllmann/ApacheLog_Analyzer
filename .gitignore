@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 data/access_ssl_log
 .vscode
+.DS_Store

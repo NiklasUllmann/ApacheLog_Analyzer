@@ -13,6 +13,8 @@ On Windows, run:
 On Unix or MacOS, run:
 ```source venv/bin/activate```
 
+```source venv/bin/activate.ps1```
+
 
 Install requiered packages:
 ```python3 -m pip install -r requirements.txt```
