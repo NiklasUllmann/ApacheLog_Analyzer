@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
 import re
+from sklearn.neighbors import KNeighborsRegressor
 
 
 def getStatusCodeCount(df):
     x = df['status'].value_counts()
-    return pd.DataFrame({'status': x.index, 'count': x.values})
+    x = pd.DataFrame({'status': x.index, 'count': x.values})
+    x = x.head(5)
+    return x
     
 def getStatusCodeTimeLine(df):
 
@@ -21,11 +24,23 @@ def getStatusCodeTimeLine(df):
 
 def getUsageHours(df):
 
-    x = df.groupby(['hour', 'minute']).size()
+    x = df
+    x['minute'] = x['minute'].apply(lambda x: _minutesToQuarters(x))
+    x = x.groupby(['hour', 'minute']).size()
     x = x.reset_index(name='counts')
     x['time'] = x['hour'].apply(str) + ':' + x['minute'].apply(str)
     x = x.sort_values(by=['time'])
     x.drop(['hour', 'minute'], axis=1, inplace=True)
+
+
+    ### Add Trendline
+
+
+    reg = KNeighborsRegressor(n_neighbors=10).fit(np.vstack(x.index), x['counts'])
+    x['bestfit'] = reg.predict(np.vstack(x.index))
+
+    ## Hier fehlt die Releation durch die Tage
+
 
     return x
 
@@ -60,10 +75,10 @@ def getReferrer(df):
     df = df.groupby("referrer").size()
     x = df.reset_index(name='counts')
     x = x.sort_values(by=['counts'], ascending=False)
+    x = x.head(5)
 
+    return x
 
-
-    print(x)
 
 
 def _regex(ref):
@@ -72,3 +87,17 @@ def _regex(ref):
         return re.findall('^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)', ref)[0]
     else:
         return ref
+
+def _minutesToQuarters(x):
+
+    x = int(x)
+    if(x >= 0 and x <=15):
+        return 0
+    elif(x >= 16 and x <=30):
+        return 1
+    elif(x >= 31 and x <=45):
+        return 2
+    elif(x >= 46 and x <=60):
+        return 3
+    else:
+        return -1
