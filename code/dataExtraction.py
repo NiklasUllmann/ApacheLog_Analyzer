@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import re
@@ -22,6 +23,15 @@ def getStatusCodeTimeLine(df):
 
 def getUsageHours(df):
 
+    
+    top = df.head(1)
+    bottom= df.tail(1)
+
+    start = datetime.strptime(str(top.iloc[0]['year']) + '-' + str(top.iloc[0]['month']) + '-' + str(top.iloc[0]['day']), "%Y-%m-%d").date()
+    end = datetime.strptime(str(bottom.iloc[0]['year']) + '-' + str(bottom.iloc[0]['month'])+ '-' + str(bottom.iloc[0]['day']), "%Y-%m-%d").date()
+    delta =  end - start
+    delta = delta.days
+
     x = df
     x['minute'] = x['minute'].apply(lambda x: _minutesToQuarters(x))
     x = x.groupby(['hour', 'minute']).size()
@@ -30,14 +40,13 @@ def getUsageHours(df):
     x = x.sort_values(by=['time'])
     x.drop(['hour', 'minute'], axis=1, inplace=True)
 
+    x['counts'] = x['counts'].div(delta)
+
 
     ### Add Trendline
-
-
     reg = KNeighborsRegressor(n_neighbors=10).fit(np.vstack(x.index), x['counts'])
     x['bestfit'] = reg.predict(np.vstack(x.index))
 
-    ## Hier fehlt die Releation durch die Tage
 
 
     return x

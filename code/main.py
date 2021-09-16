@@ -23,7 +23,6 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 from datetime import date, datetime
 from dash.exceptions import PreventUpdate
-import functools32
 
 
 
@@ -74,10 +73,9 @@ def main():
                         'padding-top': '25px', 'padding-left': '50px'}),
                 dbc.Col(dcc.DatePickerRange(
                     id='date-picker-range',
-                    end_date=date(datetime.now().year,
-                                  datetime.now().month, datetime.now().day),
                     display_format='DD.MM.YYYY',
-                    start_date_placeholder_text='DD.MM.YYYY'
+                    start_date_placeholder_text='DD.MM.YYYY',
+                    end_date_placeholder_text='DD.MM.YYYY'
                 ), style={'text-align': 'right', 'background': 'rgb(17, 17, 17)', 'padding-top': '25px', 'padding-right': '50px'}),
             ]),
 
