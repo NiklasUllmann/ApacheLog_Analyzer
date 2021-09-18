@@ -20,14 +20,19 @@ def loadLogFileToDF(path):
 
     log_data = []
 
-    with open(path) as file:
-        lines = file.readlines()
-        lines = [line.rstrip() for line in lines]
+    try:
 
-    for line in lines:
-        log_data.append(pattern.match(line).groupdict())
+        with open(path) as file:
+            lines = file.readlines()
+            lines = [line.rstrip() for line in lines]
 
-    df = pd.DataFrame(log_data)
-    df = df.drop(columns=['host'])
+        for line in lines:
+            log_data.append(pattern.match(line).groupdict())
+        df = pd.DataFrame(log_data)
+        df = df.drop(columns=['host'])
 
-    return df
+        return df
+    except:
+        raise Exception("Failed to load file")
+
+    

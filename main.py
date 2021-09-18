@@ -36,15 +36,16 @@ pio.templates.default = "plotly_dark"
 
 
 def main(path):
-    df = loadLogFileToDF(path)
+    try:
+        df = loadLogFileToDF(path)
 
-    df = dataPreparation(df)
-    ref, rc, scc, tscc, uh, ud, allg = getData(df)
+        df = dataPreparation(df)
+        ref, rc, scc, tscc, uh, ud, allg = getData(df)
 
-    fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
+        fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
         ref, rc, scc, tscc, uh, ud, allg)
 
-    app.layout = html.Div(
+        app.layout = html.Div(
         [
 
             dbc.Row([
@@ -120,7 +121,7 @@ def main(path):
         style={'background': 'rgb(17, 17, 17)'}
     )
 
-    @app.callback(
+        @app.callback(
         [dash.dependencies.Output('pie-chart', 'figure'),
          dash.dependencies.Output('time-series', 'figure'),
          dash.dependencies.Output('ug', 'figure'),
@@ -131,29 +132,33 @@ def main(path):
         [dash.dependencies.Input('date-picker-range', 'start_date'),
          dash.dependencies.Input('date-picker-range', 'end_date')],
     )
-    def update_output(start_date, end_date):
-        if start_date is not None and end_date is not None:
-            x = copy.deepcopy(df)
-            start = datetime.strptime(start_date, '%Y-%m-%d')
-            end = datetime.strptime(end_date, '%Y-%m-%d')
+        def update_output(start_date, end_date):
+            if start_date is not None and end_date is not None:
+                x = copy.deepcopy(df)
+                start = datetime.strptime(start_date, '%Y-%m-%d')
+                end = datetime.strptime(end_date, '%Y-%m-%d')
 
-            x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
+                x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
                 str).apply(' '.join, 1), format='%Y %m %d')
-            y = x[x['Datetime'].between(start, end)]
+                y = x[x['Datetime'].between(start, end)]
 
-            if(y.shape[0] <= 0):
-                print("No Logs for this time period")
-                raise PreventUpdate
+                if(y.shape[0] <= 0):
+                    print("No Logs for this time period")
+                    raise PreventUpdate
 
-            ref, rc, scc, tscc, uh, ud, allg = getData(y)
+                ref, rc, scc, tscc, uh, ud, allg = getData(y)
 
-            fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
+                fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
                 ref, rc, scc, tscc, uh, ud, allg)
 
-            return fig, fig2, fig3, fig4, fig5, fig6, lists
+                return fig, fig2, fig3, fig4, fig5, fig6, lists
 
-        else:
-            raise PreventUpdate
+            else:
+                raise PreventUpdate
+    
+    except Exception as err:
+        print("Failed to analyze log file:")
+        print(err)
 
     app.run_server(debug=False)
 
@@ -216,5 +221,4 @@ if __name__ == "__main__":
     parser.add_argument("--path", type=str, default="access_ssl_log")
     args = parser.parse_args()
     path = args.path
-    print(path)
     main(path)

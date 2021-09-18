@@ -23,4 +23,4 @@ Apache SSL Log Analyzer and Dashboard for API Usage
 ```python3 -m pip install -r requirements.txt```
 
 - Run Code:
-```python3 main.py --path="access_ssl_log"```
+```python3 main.py --path=access_ssl_log```
