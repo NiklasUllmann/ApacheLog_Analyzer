@@ -24,18 +24,10 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 from datetime import date, datetime
 from dash.exceptions import PreventUpdate
-import dash_labs as dl
-import diskcache
-cache = diskcache.Cache("./cache")
-long_callback_manager = dl.plugins.DiskcacheCachingCallbackManager(cache)
 
 
 app = dash.Dash("Apache SSL Log Analyzer & Dashboard",
-                external_stylesheets=[dbc.themes.DARKLY], plugins=[
-                    dl.plugins.FlexibleCallbacks(),
-                    dl.plugins.HiddenComponents(),
-                    dl.plugins.LongCallback(long_callback_manager)
-                ])
+                external_stylesheets=[dbc.themes.DARKLY])
 
 
 pio.templates.default = "plotly_dark"
@@ -61,54 +53,67 @@ def main():
                     display_format='DD.MM.YYYY',
                     start_date_placeholder_text='DD.MM.YYYY',
                     end_date_placeholder_text='DD.MM.YYYY'
-                ),
-                    html.Progress(id="progress_bar"), ], style={'text-align': 'right', 'background': 'rgb(17, 17, 17)', 'padding-top': '25px', 'padding-right': '50px'}),
+                ), html.P("*Updating takes some time")
+                ], style={'text-align': 'right', 'background': 'rgb(17, 17, 17)', 'padding-top': '25px', 'padding-right': '50px'}),
             ]),
 
             html.Hr(style={'border-color': 'white'}),
 
+            dcc.Loading(
+                id="loading-1",
+                type="cube",
+                children=[
+                    dbc.Row([
+                        dbc.Col(html.Div([
+                            html.H5('Overall Stats:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            html.Div([lists], id="overall-stats",),
+                        ]),),
+                        dbc.Col(html.Div([
+                            html.H5('Daily Calls:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            dcc.Graph(id="ud", figure=fig5),
 
-            dbc.Row([
-                dbc.Col(html.Div([
-                    html.H5('Overall Stats:'),
-                    html.Div([lists], id="overall-stats",),
-                ]),),
-                dbc.Col(html.Div([
-                    html.H5('Daily Calls:'),
-                    dcc.Graph(id="ud", figure=fig5),
-
-                ]),),
-            ]),
-            html.H5('Avg. Usages by quarter hours:'),
-            dcc.Graph(id="ug", figure=fig3),
-            html.Hr(style={'border-color': 'white'}),
-
-
-            dbc.Row([
-                dbc.Col(html.Div([
-                    html.H5('Status Code Time Line:'),
-                    dcc.Graph(id="time-series", figure=fig2),
-                ]),),
-                dbc.Col(html.Div([
-                    html.H5('Status Code Distribution:'),
-                    dcc.Graph(id="pie-chart", figure=fig),
-                ]),),
-            ]),
-            html.Hr(style={'border-color': 'white'}),
+                        ]),),
+                    ]),
+                    html.H5('Avg. Usages by quarter hours:', style={
+                        'padding-top': '25px', 'padding-left': '50px'}),
+                    dcc.Graph(id="ug", figure=fig3),
+                    html.Hr(style={'border-color': 'white'}),
 
 
-            dbc.Row([
-                dbc.Col(html.Div([
-                    html.H5('Most used API Routes:'),
-                    dcc.Graph(id="rc", figure=fig4),
-                ]),),
-                dbc.Col(html.Div([
-                    html.H5('Top 5 Referer:'),
-                    dcc.Graph(id="ref", figure=fig6),
-                ]),),
-            ]),
-            html.Hr(style={'border-color': 'white'}),
-            html.Div(id='output-container-date-picker-range')
+                    dbc.Row([
+                        dbc.Col(html.Div([
+                            html.H5('Status Code Time Line:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            dcc.Graph(id="time-series", figure=fig2),
+                        ]),),
+                        dbc.Col(html.Div([
+                            html.H5('Status Code Distribution:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            dcc.Graph(id="pie-chart", figure=fig),
+                        ]),),
+                    ]),
+                    html.Hr(style={'border-color': 'white'}),
+
+
+                    dbc.Row([
+                        dbc.Col(html.Div([
+                            html.H5('Most used API Routes:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            dcc.Graph(id="rc", figure=fig4),
+                        ]),),
+                        dbc.Col(html.Div([
+                            html.H5('Top 5 Referer:', style={
+                                'padding-top': '25px', 'padding-left': '50px'}),
+                            dcc.Graph(id="ref", figure=fig6),
+                        ]),),
+                    ]),
+                    html.Hr(style={'border-color': 'white'}),
+                    html.Div(["Developed by ", html.A(children=["Niklas Ullmann"], href="https://niklas-ullmann.de/", target="_blank")],
+                             style={'padding-left': '50px', })
+                ]
+            ),
         ],
         style={'background': 'rgb(17, 17, 17)'}
     )
@@ -123,7 +128,7 @@ def main():
          dash.dependencies.Output('overall-stats', 'children'), ],
         [dash.dependencies.Input('date-picker-range', 'start_date'),
          dash.dependencies.Input('date-picker-range', 'end_date')],
-        )
+    )
     def update_output(start_date, end_date):
         if start_date is not None and end_date is not None:
             x = copy.deepcopy(df)
@@ -192,16 +197,16 @@ def getFigs(ref, rc, scc, tscc, uh, ud, allg):
 def createOverallList(allg):
 
     return html.Ul(
-        children=[html.Li('Amount of Logs: {}'.format(allg["length"])),
-                  html.Li('Starting from: {}'.format(allg["start"])),
-                  html.Li('Ending with: {}'.format(allg["end"])),
-                  html.Li('Evaluating Logs off: {} Days'.format(
-                      allg["delta"])),
+        children=[html.H3(html.Li('Amount of Logs: {}'.format(allg["length"])),  style={'padding-left': '50px', }),
+                  html.H3(html.Li('Starting from: {}'.format(
+                      allg["start"])),  style={'padding-left': '50px', }),
+                  html.H3(html.Li('Ending with: {}'.format(allg["end"])),  style={
+                          'padding-left': '50px', }),
+                  html.H3(html.Li('Evaluating Logs off: {} Days'.format(
+                      allg["delta"])),  style={'padding-left': '50px', }),
 
-                  ]
+                  ],  style={'padding-left': '50px', }
     )
-
-
 
 
 if __name__ == "__main__":
