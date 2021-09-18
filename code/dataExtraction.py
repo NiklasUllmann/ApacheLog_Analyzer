@@ -10,6 +10,27 @@ def getStatusCodeCount(df):
     x = pd.DataFrame({'status': x.index, 'count': x.values})
     x = x.head(5)
     return x
+
+def getOverallStats(df):
+    allg = {}
+
+    x, y = df.shape
+    allg["length"] = x
+
+    top = df.head(1)
+    bottom= df.tail(1)
+
+    start = datetime.strptime(str(top.iloc[0]['year']) + '-' + str(top.iloc[0]['month']) + '-' + str(top.iloc[0]['day']), "%Y-%m-%d").date()
+    end = datetime.strptime(str(bottom.iloc[0]['year']) + '-' + str(bottom.iloc[0]['month'])+ '-' + str(bottom.iloc[0]['day']), "%Y-%m-%d").date()
+
+    allg["start"] = start
+    allg["end"] = end
+    delta =  end - start
+    delta = delta.days
+
+    allg["delta"] = delta
+    return allg
+
     
 def getStatusCodeTimeLine(df):
 

@@ -11,6 +11,7 @@ from dataExtraction import (
     getRequestCount,
     getUsageDays,
     getReferrer,
+    getOverallStats,
 )
 import dash
 import dash_core_components as dcc
@@ -23,10 +24,18 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 from datetime import date, datetime
 from dash.exceptions import PreventUpdate
+import dash_labs as dl
+import diskcache
+cache = diskcache.Cache("./cache")
+long_callback_manager = dl.plugins.DiskcacheCachingCallbackManager(cache)
 
 
 app = dash.Dash("Apache SSL Log Analyzer & Dashboard",
-                external_stylesheets=[dbc.themes.DARKLY])
+                external_stylesheets=[dbc.themes.DARKLY], plugins=[
+                    dl.plugins.FlexibleCallbacks(),
+                    dl.plugins.HiddenComponents(),
+                    dl.plugins.LongCallback(long_callback_manager)
+                ])
 
 
 pio.templates.default = "plotly_dark"
@@ -36,9 +45,10 @@ def main():
     df = loadLogFileToDF("../data/access_ssl_log")
 
     df = dataPreparation(df)
-    ref, rc, scc, tscc, uh, ud = getData(df)
+    ref, rc, scc, tscc, uh, ud, allg = getData(df)
 
-    fig, fig2, fig3, fig4, fig5, fig6 = getFigs(ref, rc, scc, tscc, uh, ud)
+    fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
+        ref, rc, scc, tscc, uh, ud, allg)
 
     app.layout = html.Div(
         [
@@ -46,12 +56,13 @@ def main():
             dbc.Row([
                 dbc.Col(html.H1(children="Apache SSL Log Analyzer & Dashboard"), style={
                         'padding-top': '25px', 'padding-left': '50px'}),
-                dbc.Col(dcc.DatePickerRange(
+                dbc.Col([dcc.DatePickerRange(
                     id='date-picker-range',
                     display_format='DD.MM.YYYY',
                     start_date_placeholder_text='DD.MM.YYYY',
                     end_date_placeholder_text='DD.MM.YYYY'
-                ), style={'text-align': 'right', 'background': 'rgb(17, 17, 17)', 'padding-top': '25px', 'padding-right': '50px'}),
+                ),
+                    html.Progress(id="progress_bar"), ], style={'text-align': 'right', 'background': 'rgb(17, 17, 17)', 'padding-top': '25px', 'padding-right': '50px'}),
             ]),
 
             html.Hr(style={'border-color': 'white'}),
@@ -60,6 +71,7 @@ def main():
             dbc.Row([
                 dbc.Col(html.Div([
                     html.H5('Overall Stats:'),
+                    html.Div([lists], id="overall-stats",),
                 ]),),
                 dbc.Col(html.Div([
                     html.H5('Daily Calls:'),
@@ -107,9 +119,11 @@ def main():
          dash.dependencies.Output('ug', 'figure'),
          dash.dependencies.Output('rc', 'figure'),
          dash.dependencies.Output('ud', 'figure'),
-         dash.dependencies.Output('ref', 'figure'), ],
+         dash.dependencies.Output('ref', 'figure'),
+         dash.dependencies.Output('overall-stats', 'children'), ],
         [dash.dependencies.Input('date-picker-range', 'start_date'),
-         dash.dependencies.Input('date-picker-range', 'end_date')])
+         dash.dependencies.Input('date-picker-range', 'end_date')],
+        )
     def update_output(start_date, end_date):
         if start_date is not None and end_date is not None:
             x = copy.deepcopy(df)
@@ -120,11 +134,16 @@ def main():
                 str).apply(' '.join, 1), format='%Y %m %d')
             y = x[x['Datetime'].between(start, end)]
 
-            ref, rc, scc, tscc, uh, ud = getData(y)
+            if(y.shape[0] <= 0):
+                print("No Logs for this time period")
+                raise PreventUpdate
 
-            fig, fig2, fig3, fig4, fig5, fig6 = getFigs(ref, rc, scc, tscc, uh, ud)
+            ref, rc, scc, tscc, uh, ud, allg = getData(y)
 
-            return fig, fig2, fig3, fig4, fig5, fig6
+            fig, fig2, fig3, fig4, fig5, fig6, lists = getFigs(
+                ref, rc, scc, tscc, uh, ud, allg)
+
+            return fig, fig2, fig3, fig4, fig5, fig6, lists
 
         else:
             raise PreventUpdate
@@ -140,11 +159,12 @@ def getData(df):
     tscc = getStatusCodeTimeLine(copy.deepcopy(df))
     uh = getUsageHours(copy.deepcopy(df))
     ud = getUsageDays(copy.deepcopy(df))
+    allg = getOverallStats(copy.deepcopy(df))
 
-    return ref, rc, scc, tscc, uh, ud
+    return ref, rc, scc, tscc, uh, ud, allg
 
 
-def getFigs(ref, rc, scc, tscc, uh, ud):
+def getFigs(ref, rc, scc, tscc, uh, ud, allg):
 
     fig = px.pie(scc, values="count", names="status")
     fig2 = px.line(tscc, x="date", y=tscc.columns)
@@ -164,7 +184,24 @@ def getFigs(ref, rc, scc, tscc, uh, ud):
     fig5 = px.line(ud, x="date", y="counts")
     fig6 = px.pie(ref, values="counts", names="referrer")
 
-    return fig, fig2, fig3, fig4, fig5, fig6
+    lists = createOverallList(allg)
+
+    return fig, fig2, fig3, fig4, fig5, fig6, lists
+
+
+def createOverallList(allg):
+
+    return html.Ul(
+        children=[html.Li('Amount of Logs: {}'.format(allg["length"])),
+                  html.Li('Starting from: {}'.format(allg["start"])),
+                  html.Li('Ending with: {}'.format(allg["end"])),
+                  html.Li('Evaluating Logs off: {} Days'.format(
+                      allg["delta"])),
+
+                  ]
+    )
+
+
 
 
 if __name__ == "__main__":

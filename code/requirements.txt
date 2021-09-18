@@ -4,3 +4,6 @@ dash==1.21.0
 plotly-express==0.4.1
 dash-bootstrap-components==0.13.0
 scikit-learn==0.24.2
+dash-labs==0.4.0
+diskcache==5.2.1
+multiprocess==0.70.12.2
