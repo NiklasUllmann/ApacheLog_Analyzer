@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import copy
+import argparse
+
 
 from logLoader import loadLogFileToDF
 from dataPreparation import dataPreparation
@@ -33,8 +35,8 @@ app = dash.Dash("Apache SSL Log Analyzer & Dashboard",
 pio.templates.default = "plotly_dark"
 
 
-def main():
-    df = loadLogFileToDF("../data/access_ssl_log")
+def main(path):
+    df = loadLogFileToDF(path)
 
     df = dataPreparation(df)
     ref, rc, scc, tscc, uh, ud, allg = getData(df)
@@ -210,4 +212,9 @@ def createOverallList(allg):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Path to LogFile')
+    parser.add_argument("--path", type=str, default="access_ssl_log")
+    args = parser.parse_args()
+    path = args.path
+    print(path)
+    main(path)

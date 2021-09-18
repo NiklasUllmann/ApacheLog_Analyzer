@@ -127,6 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-data/access_ssl_log
+access_ssl_log
 .vscode
 .DS_Store
