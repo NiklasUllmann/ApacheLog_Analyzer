@@ -6,6 +6,7 @@ Apache SSL Log Analyzer and Dashboard for API Usage
 
 ## Screenshots
 
+![Dashboard Screenshot](screenshot.png "Dashboard Screenshot")
 ## Execute Code
 
 - Create Virtual Environment
