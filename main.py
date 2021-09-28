@@ -193,7 +193,19 @@ def getFigs(ref, rc, scc, tscc, uh, ud, allg):
     ])
     fig3.update_layout(showlegend=False)
     fig4 = px.bar(rc, x="counts", y="request", orientation="h")
-    fig5 = px.line(ud, x="date", y="counts")
+    fig5 = go.Figure(data=[
+        go.Scatter(
+            x=ud['date'],
+            y=ud['counts']
+        ),
+        go.Scatter(
+            x=ud['date'],
+            y=ud['bestfit']
+        )
+
+    ])
+    fig5.update_layout(showlegend=False)
+    #fig5 = px.line(ud, x="date", y="counts")
     fig6 = px.pie(ref, values="counts", names="referrer")
 
     lists = createOverallList(allg)

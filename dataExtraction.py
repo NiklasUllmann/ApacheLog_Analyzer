@@ -82,6 +82,10 @@ def getUsageDays(df):
     x = x.sort_values(by=['date'])
     x.drop(['year', 'month', 'day'], axis=1, inplace=True)
 
+    ### Add Trendline
+    reg = KNeighborsRegressor(n_neighbors=10).fit(np.vstack(x.index), x['counts'])
+    x['bestfit'] = reg.predict(np.vstack(x.index))
+
     return x
 
 
