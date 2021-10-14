@@ -5,13 +5,16 @@ import re
 from sklearn.neighbors import KNeighborsRegressor
 
 
-def getStatusCodeCount(df):
+
+
+def getStatusCodeCount(df, q):
     x = df['status'].value_counts()
     x = pd.DataFrame({'status': x.index, 'count': x.values})
     x = x.head(5)
+    q.put(x)
     return x
 
-def getOverallStats(df):
+def getOverallStats(df, q):
     allg = {}
 
     x, y = df.shape
@@ -29,10 +32,11 @@ def getOverallStats(df):
     delta = delta.days
 
     allg["delta"] = delta
+    q.put(allg)
     return allg
 
     
-def getStatusCodeTimeLine(df):
+def getStatusCodeTimeLine(df, q):
 
     x = df.groupby(['year', 'month','day', 'status']).size().unstack(level=-1).fillna(0)
     x = x.reset_index()
@@ -40,9 +44,10 @@ def getStatusCodeTimeLine(df):
     x['date'] = x['year'].apply(str) + '-' + x['month'].apply(str) + '-' + x['day'].apply(str)
     x = x.sort_values(by=['date'])
     x.drop(['year', 'month', 'day'], axis=1, inplace=True)
+    q.put(x)
     return x
 
-def getUsageHours(df):
+def getUsageHours(df,q):
 
     
     top = df.head(1)
@@ -69,10 +74,10 @@ def getUsageHours(df):
     x['bestfit'] = reg.predict(np.vstack(x.index))
 
 
-
+    q.put(x)
     return x
 
-def getUsageDays(df):
+def getUsageDays(df, q):
 
     x = df.groupby(['year', 'month','day']).size()
     x = x.reset_index(name='counts')
@@ -83,13 +88,13 @@ def getUsageDays(df):
     x.drop(['year', 'month', 'day'], axis=1, inplace=True)
 
     ### Add Trendline
-    reg = KNeighborsRegressor(n_neighbors=10).fit(np.vstack(x.index), x['counts'])
+    reg = KNeighborsRegressor(n_neighbors=5).fit(np.vstack(x.index), x['counts'])
     x['bestfit'] = reg.predict(np.vstack(x.index))
-
+    q.put(x)
     return x
 
 
-def getRequestCount(df):
+def getRequestCount(df,q):
 
     x = df.groupby("request").size()
     x = x.reset_index(name='counts')
@@ -97,16 +102,21 @@ def getRequestCount(df):
     x = x[x['request'].str.contains("GET")]
     x = x.head(10)
     x = x.sort_values(by=['counts'], ascending=True)
+
+    q.put(x)
     return x
 
-def getReferrer(df):
+def getReferrer(df, q):
 
     df['referrer'] = df['referrer'].apply(lambda x: _regex(x))
 
     df = df.groupby("referrer").size()
     x = df.reset_index(name='counts')
     x = x.sort_values(by=['counts'], ascending=False)
+    x.to_csv("ref_list", sep='\t', encoding='utf-8')
+
     x = x.head(5)
+    q.put(x)
 
     return x
 

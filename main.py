@@ -1,7 +1,10 @@
+import multiprocessing
 import numpy as np
 import pandas as pd
 import copy
 import argparse
+from os import getpid
+
 
 
 from logLoader import loadLogFileToDF
@@ -26,7 +29,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 from datetime import date, datetime
 from dash.exceptions import PreventUpdate
-
+from multiprocessing import Process, Queue
 
 app = dash.Dash("Apache SSL Log Analyzer & Dashboard",
                 external_stylesheets=[dbc.themes.DARKLY])
@@ -137,10 +140,27 @@ def main(path):
                 x = copy.deepcopy(df)
                 start = datetime.strptime(start_date, '%Y-%m-%d')
                 end = datetime.strptime(end_date, '%Y-%m-%d')
+                
+                splits = np.array_split(x, multiprocessing.cpu_count()/2)
+                q = Queue()
+                procs = []
 
-                x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
-                str).apply(' '.join, 1), format='%Y %m %d')
-                y = x[x['Datetime'].between(start, end)]
+                for i in splits:
+                    p = Process(target= trimDF, args=(i,start, end, q,))
+                    procs.append(p)
+                    p.start()
+                
+                print(len(procs))
+                for p in procs:
+                    p.join()
+                
+                print("ready")
+                for i in iter(q.get, None):
+                    print(i.head)
+
+                    
+
+                
 
                 if(y.shape[0] <= 0):
                     print("No Logs for this time period")
@@ -163,15 +183,58 @@ def main(path):
     app.run_server(debug=False)
 
 
+def trimDF(x, start, end, q):
+    print(getpid())
+    x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
+                str).apply(' '.join, 1), format='%Y %m %d')
+    y = x[x['Datetime'].between(start, end)]
+    q.put(y)
+    print("Fertig"+str(getpid()))
+    return y
+
 def getData(df):
 
-    ref = getReferrer(copy.deepcopy(df))
-    rc = getRequestCount(copy.deepcopy(df))
-    scc = getStatusCodeCount(copy.deepcopy(df))
-    tscc = getStatusCodeTimeLine(copy.deepcopy(df))
-    uh = getUsageHours(copy.deepcopy(df))
-    ud = getUsageDays(copy.deepcopy(df))
-    allg = getOverallStats(copy.deepcopy(df))
+    print("Number of cpu : ", multiprocessing.cpu_count())
+
+    q1 = Queue()
+    q2 = Queue()
+    q3 = Queue()
+    q4 = Queue()
+    q5 = Queue()
+    q6 = Queue()
+    q7 = Queue()
+
+    p1 = Process(target= getReferrer, args=(copy.deepcopy(df), q1,))
+    p1.start()
+    p2 = Process(target= getRequestCount, args=(copy.deepcopy(df), q2,))
+    p2.start()
+    p3 = Process(target= getStatusCodeCount, args=(copy.deepcopy(df), q3,))
+    p3.start()
+    p4 = Process(target= getStatusCodeTimeLine, args=(copy.deepcopy(df), q4,))
+    p4.start()
+    p5 = Process(target= getUsageHours, args=(copy.deepcopy(df), q5,))
+    p5.start()
+    p6 = Process(target= getUsageDays, args=(copy.deepcopy(df), q6,))
+    p6.start()
+    p7 = Process(target= getOverallStats, args=(copy.deepcopy(df), q7,))
+    p7.start()
+
+    p1.join()
+    p2.join()
+    p3.join()
+    p4.join()
+    p5.join()
+    p6.join()
+    p7.join()
+
+
+    ref = q1.get()
+    rc = q2.get()
+    scc = q3.get()
+    tscc = q4.get()
+    uh = q5.get()
+    ud = q6.get()
+    allg = q7.get()
 
     return ref, rc, scc, tscc, uh, ud, allg
 
@@ -229,8 +292,10 @@ def createOverallList(allg):
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method('fork')
     parser = argparse.ArgumentParser(description='Path to LogFile')
     parser.add_argument("--path", type=str, default="access_ssl_log")
     args = parser.parse_args()
     path = args.path
     main(path)
+
