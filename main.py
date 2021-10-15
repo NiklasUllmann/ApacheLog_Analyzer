@@ -5,6 +5,8 @@ import copy
 import argparse
 from os import getpid
 
+from pandas.core.frame import DataFrame
+
 
 
 from logLoader import loadLogFileToDF
@@ -141,25 +143,10 @@ def main(path):
                 start = datetime.strptime(start_date, '%Y-%m-%d')
                 end = datetime.strptime(end_date, '%Y-%m-%d')
                 
-                splits = np.array_split(x, multiprocessing.cpu_count()/2)
-                q = Queue()
-                procs = []
-
-                for i in splits:
-                    p = Process(target= trimDF, args=(i,start, end, q,))
-                    procs.append(p)
-                    p.start()
-                
-                print(len(procs))
-                for p in procs:
-                    p.join()
-                
-                print("ready")
-                for i in iter(q.get, None):
-                    print(i.head)
-
-                    
-
+               
+                x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
+                str).apply(' '.join, 1), format='%Y %m %d')
+                y = x[x['Datetime'].between(start, end)]
                 
 
                 if(y.shape[0] <= 0):
@@ -183,14 +170,6 @@ def main(path):
     app.run_server(debug=False)
 
 
-def trimDF(x, start, end, q):
-    print(getpid())
-    x['Datetime'] = pd.to_datetime(x[['year', 'month', 'day']].astype(
-                str).apply(' '.join, 1), format='%Y %m %d')
-    y = x[x['Datetime'].between(start, end)]
-    q.put(y)
-    print("Fertig"+str(getpid()))
-    return y
 
 def getData(df):
 
